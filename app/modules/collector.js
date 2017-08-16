@@ -20,7 +20,7 @@ module.exports = (() => {
 
   const drafting = (ref) => {
     if (ref._usersPool.length && ref._session) {
-      const selectedUser = ref._usersPool[0]
+      const selectedUser = ref._usersPool[0];
       const userId = selectedUser.userId;
       const userLastDraftingTime = selectedUser.lastDraftingTime;
 
@@ -42,10 +42,8 @@ module.exports = (() => {
           selectedUser.lastDraftingTime = newLastDraftingTime;
           selectedUser.save((err, res) => {
             if (err) throw err;
-            const indexToDelete = ref._usersPool.indexOf(selectedUser);
-            if (indexToDelete != -1) {
-              ref._usersPool.splice(indexToDelete, 1);
-            }
+            ref._usersPool.shift();
+            console.log(`newLastDraftingTime of ${userId} has been updated`);
           });
         }
 
@@ -75,13 +73,19 @@ module.exports = (() => {
             if (err) throw err;
           });
         });
+      }).catch((e) => {
+        const user = ref._usersPool.shift();
+        console.log(`Error ${e.name} from ${user.id}`);
+        if (e.name == 'PrivateUserError') {
+          return Client.Relationship.create(ref._session, user.userId);
+        }
       });
     }
   }
 
   const populateUsers = (ref) => {
     if (!ref._usersPool.length) {
-      Users.find({}, (err, users) => {
+      Users.find({username: {$exists:true}}, (err, users) => {
         if (err) throw err;
         console.log('Users refill...\n');
         this._usersPool = users;
