@@ -3,7 +3,6 @@
 const Client = require('instagram-private-api').V1;
 const request = require('request');
 const _ = require('underscore');
-const Promise = require('bluebird');
 
 const Users = require('models/users');
 const Draft = require('models/draft');
