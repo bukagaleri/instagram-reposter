@@ -24,6 +24,8 @@ module.exports = (() => {
       const userId = selectedUser.userId;
       const userLastDraftingTime = selectedUser.lastDraftingTime;
 
+      console.log(`Try to collect from ${selectedUser.username}`);
+
       const feed = new Client.Feed.UserMedia(ref._session, userId, process.env.FEED_COUNT || 10);
 
       feed.get().then((results) => {
@@ -45,6 +47,8 @@ module.exports = (() => {
             ref._usersPool.shift();
             console.log(`newLastDraftingTime of ${userId} has been updated`);
           });
+        } else {
+          ref._usersPool.shift();
         }
 
         if (media.length) {
