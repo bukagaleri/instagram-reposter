@@ -24,7 +24,7 @@ module.exports = (() => {
       const userId = selectedUser.userId;
       const userLastDraftingTime = selectedUser.lastDraftingTime;
 
-      const feed = new Client.Feed.UserMedia(ref._session, userId, 10);
+      const feed = new Client.Feed.UserMedia(ref._session, userId, process.env.FEED_COUNT || 10);
 
       feed.get().then((results) => {
         const media = _(results).filter((medium) => {
