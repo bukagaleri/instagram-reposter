@@ -65,6 +65,7 @@ module.exports = (() => {
   }
 
   const routine = (command, interval, ...args) => {
+    command.apply(this, args);
     setInterval(() => {
       command.apply(this, args);
     }, interval);
