@@ -34,7 +34,7 @@ module.exports = (() => {
 
       Client.Account.getById(ref._session, userId).then((result) => {
         const username = result._params.username;
-        const copyrightedCaption = `${caption.replace(/\n+$/g, '')}\n.\n.\n.\n\ud83d\udcf7 @${username}`;
+        const copyrightedCaption = `${caption.replace(/(\n|\s)+$/g, '')}\n.\n.\n.\n\ud83d\udcf7 @${username}`;
         return [copyrightedCaption, username];
       }).spread((copyrightedCaption, username) => {
         const filename = `${__root}tmp/${imageUrl.split('/').pop()}`;
