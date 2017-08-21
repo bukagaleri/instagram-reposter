@@ -45,6 +45,8 @@ module.exports = (() => {
         		return Client.Media.configurePhoto(ref._session, upload.params.uploadId, copyrightedCaption, width, height);
             console.log('done uploading ', filename);
         	}).then((medium) => {
+            const mediaId = medium.id;
+            Client.Like.create(ref._session, mediaId);
             fs.unlink(filename, () => {
               console.log('done removing ', filename);
             });

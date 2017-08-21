@@ -56,6 +56,7 @@ module.exports = (() => {
         }
 
         media.forEach((item) => {
+          const itemId = item.id;
           const image = _.first(item._params.images);
           const draft = Draft();
           const captionRegExp = new RegExp(`#${process.env.QUERY_TAG}`, 'gi');
@@ -73,8 +74,10 @@ module.exports = (() => {
             width: originalWidth,
             height: originalHeight
           });
+
           draft.save((err, res) => {
             if (err) throw err;
+            Client.Like.create(ref._session, itemId);
           });
         });
       }).catch((e) => {
