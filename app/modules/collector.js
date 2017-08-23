@@ -92,7 +92,7 @@ module.exports = (() => {
 
   const populateUsers = (ref) => {
     if (!ref._usersPool.length) {
-      Users.find({username: {$exists:true}, active: true}, (err, users) => {
+      Users.find({username: {$exists:true}, active: { $ne: false }}, (err, users) => {
         if (err) throw err;
         console.log('Users refill...\n');
         this._usersPool = users;
