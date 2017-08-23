@@ -9,5 +9,6 @@ module.exports = mongoose.model('users', new Schema({
   teleUserId: String,
   teleUsername: String,
   fullName: String,
-  lastDraftingTime: {type: Number, default: 0}
+  lastDraftingTime: {type: Number, default: 0},
+  active: {type: Boolean, default: true}
 }));
