@@ -9,5 +9,7 @@ module.exports = mongoose.model('draft', new Schema({
   caption: String,
   width: Number,
   height: Number,
-  date: Number
+  date: Number,
+  mediaType: {type: Number, default: 1},
+  extraArguments: {type: String, default: '{}'}
 }));

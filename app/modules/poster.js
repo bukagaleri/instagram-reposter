@@ -3,6 +3,7 @@
 const Client = require('instagram-private-api').V1;
 const request = require('request');
 const fs = require('fs');
+const Promise = require('bluebird')
 
 const Draft = require('models/draft');
 const Users = require('models/users');
@@ -17,9 +18,56 @@ module.exports = (() => {
     });
   }
 
-  const download = (uri, filename, callback) => {
-    request.head(uri, (err, res, body) => {
-      request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+  const download = (uri, filename) => {
+    return new Promise((resolve, reject) => {
+      request.head(uri, (err, res, body) => {
+        request(uri).pipe(fs.createWriteStream(filename))
+        .on('finish', resolve)
+        .on('error', reject);
+      });
+    });
+  }
+
+  const uploadFunction = (ref, selectedDraft, copyrightedCaption) => {
+    const mediaType = selectedDraft.mediaType;
+    const mediaUrl = selectedDraft.url;
+
+    const targetMediaFile = `${__root}tmp/${mediaUrl.split('/').pop()}`;
+    const width = selectedDraft.width;
+    const height = selectedDraft.height;
+
+    const extraArguments = JSON.parse(selectedDraft.extraArguments);
+
+    const uploadSwitcher = {
+      1: () => {
+        return download(mediaUrl, targetMediaFile).then(() => {
+          return Client.Upload.photo(ref._session, targetMediaFile).then((upload) => {
+            fs.unlink(targetMediaFile, () => console.log(targetMediaFile, 'removed'));
+            return Client.Media.configurePhoto(ref._session, upload.params.uploadId, copyrightedCaption, width, height);
+          });
+        });
+      },
+      2: () => {
+        const previewUrl = extraArguments.previewUrl;
+        const durationms = extraArguments.durationms;
+        const targetPreviewMediaFile = `${__root}tmp/${previewUrl.split('/').pop()}`;
+        const promises = [];
+        promises.push(download(mediaUrl, targetMediaFile));
+        promises.push(download(previewUrl, targetPreviewMediaFile));
+
+        return Promise.all(promises).then((results) => {
+          return Client.Upload.video(ref._session, targetMediaFile, targetPreviewMediaFile, width, height).then((upload) => {
+            fs.unlink(targetMediaFile, () => console.log(targetMediaFile, 'removed'));
+            fs.unlink(targetPreviewMediaFile, () => console.log(targetPreviewMediaFile, 'removed') );
+            return Client.Media.configureVideo(ref._session, upload.uploadId, copyrightedCaption, durationms);
+          });
+        });
+      }
+    }
+
+    return uploadSwitcher[mediaType]().then((medium) => {
+      ref._draftPool.shift().remove();
+      Client.Like.create(ref._session, medium.id);
     });
   }
 
@@ -28,30 +76,14 @@ module.exports = (() => {
       const selectedDraft = ref._draftPool[0];
       const userId = selectedDraft.userId;
       const caption = selectedDraft.caption;
-      const imageUrl = selectedDraft.url;
-      const width = selectedDraft.width;
-      const height = selectedDraft.height;
 
       Client.Account.getById(ref._session, userId).then((result) => {
         const username = result._params.username;
         const copyrightedCaption = `${caption.replace(/(\n|\s)+$/g, '')}\n.\n.\n.\n\ud83d\udcf7 @${username}`;
-        return [copyrightedCaption, username];
-      }).spread((copyrightedCaption, username) => {
-        const filename = `${__root}tmp/${imageUrl.split('/').pop()}`;
-        download(imageUrl, filename, () => {
-          console.log('done downloading ', filename);
-          ref._draftPool.shift().remove();
-          Client.Upload.photo(ref._session, filename).then((upload) => {
-        		return Client.Media.configurePhoto(ref._session, upload.params.uploadId, copyrightedCaption, width, height);
-            console.log('done uploading ', filename);
-        	}).then((medium) => {
-            const mediaId = medium.id;
-            Client.Like.create(ref._session, mediaId);
-            fs.unlink(filename, () => {
-              console.log('done removing ', filename);
-            });
-          });
-        });
+        return copyrightedCaption;
+      }).then((copyrightedCaption) => {
+
+        uploadFunction(ref, selectedDraft, copyrightedCaption);
       });
     };
   }

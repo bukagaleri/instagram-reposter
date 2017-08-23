@@ -5,3 +5,4 @@ node_modules
 app/cookies/*.json
 tmp/*.jpeg
 tmp/*.jpg
+tmp/*.mp4

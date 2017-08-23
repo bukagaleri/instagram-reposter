@@ -12,6 +12,40 @@ const storage = new Client.CookieFileStorage(`${__app}cookies/bukagaleri.json`);
 
 module.exports = (() => {
 
+  const getExtraArguments = (media) => {
+    const mediaType = media.mediaType;
+
+    const extraArgumentsSwitcher = {
+      1: () => {
+        return {}
+      },
+      2: () => {
+        return {
+          previewUrl: getMediaUrl(Object.assign({}, media, {mediaType: 1})),
+          durationms: media.videoDuration * 1000
+        };
+      }
+    }
+
+    return JSON.stringify(extraArgumentsSwitcher[mediaType]());
+  }
+
+  const getMediaUrl = (media) => {
+    const mediaTypeUrlSwitcher = {
+      1: () => {
+        const image = _.first(media.images);
+        const splittedUrl = image.url.replace(/\?.*$/g, '').split('/');
+        return splittedUrl.splice(0, 3).concat(['original', ...splittedUrl.splice(-1)]).join('/');
+      },
+      2: () => {
+        const video = _.first(media.videos);
+        const splittedUrl = video.url.replace(/\?.*$/g, '').split('/')
+        return splittedUrl.splice(0, 3).concat(['original', ...splittedUrl.splice(-1)]).join('/');
+      }
+    }
+    return mediaTypeUrlSwitcher[media.mediaType].call(this)
+  }
+
   const igLogin = (callback) => {
     Client.Session.create(device, storage, process.env.IG_USERNAME, process.env.IG_PASSWORD).then((session) => {
       callback(session);
@@ -52,27 +86,29 @@ module.exports = (() => {
         }
 
         if (media.length) {
-          console.log(`Got ${media.length} new image(s)`);
+          console.log(`Got ${media.length} new media`);
         }
 
         media.forEach((item) => {
           const itemId = item.id;
-          const image = _.first(item._params.images);
           const draft = Draft();
           const captionRegExp = new RegExp(`#${process.env.QUERY_TAG}`, 'gi');
           const originalWidth = item._params.originalWidth;
           const originalHeight = item._params.originalHeight;
-          const originalUrl = image.url.replace(/\?.*$/g, '').split('/').map((n) => {
-            return n.indexOf(`${image.width}x`) != -1 ? 'original' : n
-          }).join('/');
+          const mediaType = item._params.mediaType;
+
+          const originalUrl = getMediaUrl(item._params);
+          const extraArguments = getExtraArguments(item._params);
 
           Object.assign(draft, {
-            draft, url: originalUrl,
+            url: originalUrl,
+            extraArguments: extraArguments,
             userId: userId,
             caption: item._params.caption.replace(captionRegExp, ''),
             date: item._params.takenAt,
             width: originalWidth,
-            height: originalHeight
+            height: originalHeight,
+            mediaType: mediaType
           });
 
           draft.save((err, res) => {
@@ -82,7 +118,7 @@ module.exports = (() => {
         });
       }).catch((e) => {
         const user = ref._usersPool.shift();
-        console.log(`Error ${e.name} from ${user.id}`);
+        console.log(`Error from ${selectedUser.username}: `, e);
         if (e.name == 'PrivateUserError') {
           return Client.Relationship.create(ref._session, user.userId);
         }
