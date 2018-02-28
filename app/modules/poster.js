@@ -9,7 +9,7 @@ const Draft = require('models/draft');
 const Users = require('models/users');
 
 const device = new Client.Device('bukagaleri');
-const storage = new Client.CookieFileStorage(`${__app}cookies/bukagaleri.json`);
+const storage = new Client.CookieMemoryStorage();
 
 module.exports = (() => {
   const igLogin = (callback) => {
